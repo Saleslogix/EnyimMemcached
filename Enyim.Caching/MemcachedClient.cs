@@ -1,12 +1,10 @@
 using System;
-using System.Linq;
 using System.Configuration;
 using Enyim.Caching.Configuration;
 using Enyim.Caching.Memcached;
 using System.Collections.Generic;
 using System.Threading;
 using System.Net;
-using System.Diagnostics;
 using Enyim.Caching.Memcached.Results;
 using Enyim.Caching.Memcached.Results.Factories;
 using Enyim.Caching.Memcached.Results.Extensions;
@@ -66,7 +64,15 @@ namespace Enyim.Caching
 
 			this.keyTransformer = configuration.CreateKeyTransformer() ?? new DefaultKeyTransformer();
 			this.transcoder = configuration.CreateTranscoder() ?? new DefaultTranscoder();
-			this.performanceMonitor = configuration.CreatePerformanceMonitor();
+		    try
+		    {
+                this.performanceMonitor = configuration.CreatePerformanceMonitor();
+		    }
+		    catch (Exception e)
+		    {
+		        this.performanceMonitor = null;
+                log.Error("The performance monitor could not be created.", e);
+		    }
 
 			this.pool = configuration.CreatePool();
 			this.pool.NodeFailed += (n) => { var f = this.NodeFailed; if (f != null) f(n); };
@@ -355,7 +361,7 @@ namespace Enyim.Caching
 				try { item = this.transcoder.Serialize(value); }
 				catch (Exception e)
 				{
-					log.Error(e);
+					log.Error(e.Message, e);
 
 					if (this.performanceMonitor != null) this.performanceMonitor.Store(mode, 1, false);
 
@@ -871,7 +877,7 @@ namespace Enyim.Caching
 					}
 					catch (Exception e)
 					{
-						log.Error(e);
+						log.Error(e.Message, e);
 					}
 					finally
 					{
